@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2021, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,21 +14,26 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 FROM oraclelinux:7-slim
 
-ARG MYSQL_SERVER_PACKAGE=mysql-community-server-minimal-5.7.33
-ARG MYSQL_SHELL_PACKAGE=mysql-shell-8.0.22
+ARG MYSQL_SERVER_PACKAGE=mysql-community-server-minimal-5.7.34
+ARG MYSQL_SHELL_PACKAGE=mysql-shell-8.0.23
 
-# Install server
-RUN yum install -y https://repo.mysql.com/mysql-community-minimal-release-el7.rpm \
-      https://repo.mysql.com/mysql-community-release-el7.rpm \
-  && yum-config-manager --enable mysql57-server-minimal \
-  && yum install -y \
-      $MYSQL_SERVER_PACKAGE \
-      $MYSQL_SHELL_PACKAGE \
-      libpwquality \
+# Setup repositories for minimal packages (all versions)
+RUN rpm -U https://repo.mysql.com/mysql-community-minimal-release-el7.rpm \
+  && rpm -U https://repo.mysql.com/mysql80-community-release-el7-1.noarch.rpm
+
+# Install server and shell 8.0
+RUN yum install -y $MYSQL_SHELL_PACKAGE \
+  && yum install -y $MYSQL_SERVER_PACKAGE --enablerepo=mysql57-server-minimal\
   && yum clean all \
   && mkdir /docker-entrypoint-initdb.d
 
-VOLUME /var/lib/mysql
+# Ensure mysqld logs go to stderr
+RUN sed -i 's/^log-error=/#&/' /etc/my.cnf
+
+COPY prepare-image.sh /
+RUN /prepare-image.sh && rm -f /prepare-image.sh
+
+ENV MYSQL_UNIX_PORT /var/lib/mysql/mysql.sock
 
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY healthcheck.sh /healthcheck.sh

@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2021, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -12,23 +12,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
-FROM oraclelinux:7-slim
+
+FROM oraclelinux:8-slim
 
 ARG MYSQL_SERVER_PACKAGE=%%MYSQL_SERVER_PACKAGE%%
 ARG MYSQL_SHELL_PACKAGE=%%MYSQL_SHELL_PACKAGE%%
 
-# Install server
-RUN yum install -y %%REPO%%/mysql-community-minimal-release-el7.rpm \
-      %%REPO%%/mysql-community-release-el7.rpm \
-  && yum-config-manager --enable mysql%%REPO_VERSION%%-server-minimal \
-  && yum install -y \
-      $MYSQL_SERVER_PACKAGE \
-      $MYSQL_SHELL_PACKAGE \
-      libpwquality \
-  && yum clean all \
+# Setup repositories for minimal packages (all versions)
+RUN rpm -U %%REPO%%/mysql-community-minimal-release-el8.rpm \
+  && rpm -U %%REPO%%/mysql80-community-release-el8-1.noarch.rpm
+
+# Install server and shell 8.0
+RUN microdnf update && echo "[main]" > /etc/dnf/dnf.conf \
+  && microdnf install -y $MYSQL_SHELL_PACKAGE \
+  && microdnf install -y --disablerepo=ol8_appstream \
+   --enablerepo=mysql%%REPO_VERSION%%-server-minimal $MYSQL_SERVER_PACKAGE \
+  && microdnf clean all \
   && mkdir /docker-entrypoint-initdb.d
 
-VOLUME /var/lib/mysql
+COPY prepare-image.sh /
+RUN /prepare-image.sh && rm -f /prepare-image.sh
+
+ENV MYSQL_UNIX_PORT /var/lib/mysql/mysql.sock
 
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY healthcheck.sh /healthcheck.sh

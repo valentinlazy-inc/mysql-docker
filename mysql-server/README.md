@@ -16,11 +16,9 @@ Supported Tags and Respective Dockerfile Links
 
 These are tags for some of the optimized MySQL Server Docker images, created and maintained by the MySQL team at Oracle (for a full list, see [the Tags tab of this page](https://hub.docker.com/r/mysql/mysql-server/tags/)). [DS] The tags are updated directly on the posted Markdown versions by RE after eahc release, so it might remain outdated in this DocBook source file.
 
--   MySQL Server 5.6 (tag: [`5.6`, `5.6.42`, `5.6.42-1.1.8`](https://github.com/mysql/mysql-docker/blob/mysql-server/5.6/Dockerfile)) ([mysql-server/5.6/Dockerfile](https://github.com/mysql/mysql-docker/blob/mysql-server/5.6/Dockerfile))
+-   MySQL Server 5.7 (tag: [`5.7`, `5.7.24`, `5.7.24-1.1.8`](https://github.com/mysql/mysql-docker/mysql-server/5.7/Dockerfile)) ([mysql-server/5.7/Dockerfile](https://github.com/mysql/mysql-docker/blob/mysql-server/5.7/Dockerfile))
 
--   MySQL Server 5.7 (tag: [`5.7`, `5.7.24`, `5.7.24-1.1.8`](https://github.com/mysql/mysql-docker/blob/mysql-server/5.7/Dockerfile)) ([mysql-server/5.7/Dockerfile](https://github.com/mysql/mysql-docker/blob/mysql-server/5.7/Dockerfile))
-
--   MySQL Server 8.0, the latest GA (tag: [`8.0`, `8.0.13`, `8.0.13-1.1.8`, `latest`](https://github.com/mysql/mysql-docker/blob/mysql-server/8.0/Dockerfile)) ([mysql-server/8.0/Dockerfile](https://github.com/mysql/mysql-docker/blob/mysql-server/8.0/Dockerfile))
+-   MySQL Server 8.0, the latest GA (tag: [`8.0`, `8.0.23`, `8.0.23-1.2.0`, `latest`](https://github.com/mysql/mysql-docker/mysql-server/8.0/Dockerfile)) ([mysql-server/8.0/Dockerfile](https://github.com/mysql/mysql-docker/blob/mysql-server/8.0/Dockerfile))
 
 -   MySQL Server 8.0 is also available for AArch64 (ARM64), using the same tags.
 
@@ -66,7 +64,7 @@ The `--name` option, for supplying a custom name for your server container (`mys
     shell> docker ps
     CONTAINER ID   IMAGE                COMMAND                  CREATED             STATUS                              PORTS                NAMES
     a24888f0d6f4   mysql/mysql-server   "/entrypoint.sh my..."   14 seconds ago      Up 13 seconds (health: starting)    3306/tcp, 33060/tcp  mysql1
-&nbsp;             
+&nbsp;
 The container initialization might take some time. When the server is ready for use, the `STATUS` of the container in the output of the `docker ps` command changes from `(health: starting)` to `(healthy)`.
 
 The `-d` option used in the `docker

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2021, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 set -e
 
-echo "[Entrypoint] MySQL Docker Image 5.7.33-1.1.19"
+echo "[Entrypoint] MySQL Docker Image 5.7.34-1.2.0"
 # Fetch value from server config
 # We use mysqld --verbose --help instead of my_print_defaults because the
 # latter only show values present in config files, and not server defaults
@@ -24,11 +24,30 @@ _get_config() {
 	"$@" --verbose --help 2>/dev/null | grep "^$conf" | awk '$1 == "'"$conf"'" { print $2; exit }'
 }
 
+# Generate a random password
+_mkpw() {
+	letter=$(cat /dev/urandom| tr -dc a-zA-Z | dd bs=1 count=16 2> /dev/null )
+	number=$(cat /dev/urandom| tr -dc 0-9 | dd bs=1 count=8 2> /dev/null)
+	special=$(cat /dev/urandom| tr -dc '=+@#%^&*_.,;:?/' | dd bs=1 count=8 2> /dev/null)
+
+	echo $letter$number$special | fold -w 1 | shuf | tr -d '\n'
+}
+
 # If command starts with an option, prepend mysqld
 # This allows users to add command-line options without
 # needing to specify the "mysqld" command
 if [ "${1:0:1}" = '-' ]; then
 	set -- mysqld "$@"
+fi
+
+# Check if entrypoint (and the container) is running as root
+if [ $(id -u) = "0" ]; then
+	is_root=1
+	install_devnull="install /dev/null -m0600 -omysql -gmysql"
+	MYSQLD_USER=mysql
+else
+	install_devnull="install /dev/null -m0600"
+	MYSQLD_USER=$(id -u)
 fi
 
 if [ "$1" = 'mysqld' ]; then
@@ -46,13 +65,6 @@ if [ "$1" = 'mysqld' ]; then
 	DATADIR="$(_get_config 'datadir' "$@")"
 	SOCKET="$(_get_config 'socket' "$@")"
 
-	if [ -n "$MYSQL_LOG_CONSOLE" ] || [ -n "" ]; then
-		# Don't touch bind-mounted config files
-		if ! cat /proc/1/mounts | grep "etc/my.cnf"; then
-			sed -i 's/^log-error=/#&/' /etc/my.cnf
-		fi
-	fi
-
 	if [ ! -d "$DATADIR/mysql" ]; then
 		# If the password variable is a filename we use the contents of the file. We
 		# read this first to make sure that a proper error is generated for empty files.
@@ -69,19 +81,21 @@ if [ "$1" = 'mysqld' ]; then
 			MYSQL_RANDOM_ROOT_PASSWORD=true
 			MYSQL_ONETIME_PASSWORD=true
 		fi
-		mkdir -p "$DATADIR"
-		chown -R mysql:mysql "$DATADIR"
+		if [ ! -d "$DATADIR" ]; then
+			mkdir -p "$DATADIR"
+			chown mysql:mysql "$DATADIR"
+		fi
 
 		echo '[Entrypoint] Initializing database'
-		"$@" --initialize-insecure
+		"$@" --user=$MYSQLD_USER --initialize-insecure
 		echo '[Entrypoint] Database initialized'
 
-		"$@" --daemonize --skip-networking --socket="$SOCKET"
+		"$@" --user=$MYSQLD_USER --daemonize --skip-networking --socket="$SOCKET"
 
 		# To avoid using password on commandline, put it in a temporary file.
 		# The file is only populated when and if the root password is set.
 		PASSFILE=$(mktemp -u /var/lib/mysql-files/XXXXXXXXXX)
-		install /dev/null -m0600 -omysql -gmysql "$PASSFILE"
+		$install_devnull "$PASSFILE"
 		# Define the client command used throughout the script
 		# "SET @@SESSION.SQL_LOG_BIN=0;" is required for products like group replication to work properly
 		mysql=( mysql --defaults-extra-file="$PASSFILE" --protocol=socket -uroot -hlocalhost --socket="$SOCKET" --init-command="SET @@SESSION.SQL_LOG_BIN=0;")
@@ -102,9 +116,9 @@ if [ "$1" = 'mysqld' ]; then
 		fi
 
 		mysql_tzinfo_to_sql /usr/share/zoneinfo | "${mysql[@]}" mysql
-		
+
 		if [ ! -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
-			MYSQL_ROOT_PASSWORD="$(pwmake 128)"
+			MYSQL_ROOT_PASSWORD="$(_mkpw)"
 			echo "[Entrypoint] GENERATED ROOT PASSWORD: $MYSQL_ROOT_PASSWORD"
 		fi
 		if [ -z "$MYSQL_ROOT_HOST" ]; then
@@ -163,25 +177,21 @@ EOF
 
 		# This needs to be done outside the normal init, since mysqladmin shutdown will not work after
 		if [ ! -z "$MYSQL_ONETIME_PASSWORD" ]; then
-			if [ -z "yes" ]; then
-				echo "[Entrypoint] User expiration is only supported in MySQL 5.6+"
-			else
-				echo "[Entrypoint] Setting root user as expired. Password will need to be changed before database can be used."
-				SQL=$(mktemp -u /var/lib/mysql-files/XXXXXXXXXX)
-				install /dev/null -m0600 -omysql -gmysql "$SQL"
-				if [ ! -z "$MYSQL_ROOT_HOST" ]; then
-					cat << EOF > "$SQL"
+			echo "[Entrypoint] Setting root user as expired. Password will need to be changed before database can be used."
+			SQL=$(mktemp -u /var/lib/mysql-files/XXXXXXXXXX)
+			$install_devnull "$SQL"
+			if [ ! -z "$MYSQL_ROOT_HOST" ]; then
+				cat << EOF > "$SQL"
 ALTER USER 'root'@'${MYSQL_ROOT_HOST}' PASSWORD EXPIRE;
 ALTER USER 'root'@'localhost' PASSWORD EXPIRE;
 EOF
-				else
-					cat << EOF > "$SQL"
+			else
+				cat << EOF > "$SQL"
 ALTER USER 'root'@'localhost' PASSWORD EXPIRE;
 EOF
-				fi
-				set -- "$@" --init-file="$SQL"
-				unset SQL
 			fi
+			set -- "$@" --init-file="$SQL"
+			unset SQL
 		fi
 
 		echo
@@ -192,17 +202,26 @@ EOF
 	# Used by healthcheck to make sure it doesn't mistakenly report container
 	# healthy during startup
 	# Put the password into the temporary config file
-	touch /healthcheck.cnf
-	cat >"/healthcheck.cnf" <<EOF
+	touch /var/lib/mysql-files/healthcheck.cnf
+	cat >"/var/lib/mysql-files/healthcheck.cnf" <<EOF
 [client]
 user=healthchecker
 socket=${SOCKET}
 password=healthcheckpass
 EOF
-	touch /mysql-init-complete
-	chown -R mysql:mysql "$DATADIR"
-	echo "[Entrypoint] Starting MySQL 5.7.33-1.1.19"
+	touch /var/lib/mysql-files/mysql-init-complete
+
+	if [ -n "$MYSQL_INITIALIZE_ONLY" ]; then
+		echo "[Entrypoint] MYSQL_INITIALIZE_ONLY is set, exiting without starting MySQL..."
+		exit 0
+	else
+		echo "[Entrypoint] Starting MySQL 5.7.34-1.2.0"
+	fi
+else
+	if [ -n "$MYSQL_INITIALIZE_ONLY" ]; then
+		echo "[Entrypoint] MySQL already initialized and MYSQL_INITIALIZE_ONLY is set, exiting without starting MySQL..."
+		exit 0
+	fi
 fi
 
-exec "$@"
-
+exec "$@" --user=$MYSQLD_USER

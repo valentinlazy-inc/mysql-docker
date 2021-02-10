@@ -8,15 +8,12 @@ control 'container' do
     its('command') { should match '/entrypoint.sh mysqld' }
   end
 end
-control 'server-package' do
+control 'packages' do
   impact 0.5
   describe package('mysql-community-server-minimal') do
     it { should be_installed }
     its ('version') { should match '%%MYSQL_SERVER_VERSION%%.*' }
   end
-end
-control 'shell-package' do
-  impact 0.5
   describe package('mysql-shell') do
     it { should be_installed }
     its ('version') { should match '%%MYSQL_SHELL_VERSION%%.*' }

@@ -1,4 +1,4 @@
-# Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2021, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,19 +18,20 @@ FROM oraclelinux:7-slim
 ARG MYSQL_CLUSTER_PACKAGE=mysql-cluster-community-server-minimal-7.6.17
 ARG MYSQL_SHELL_PACKAGE=mysql-shell-8.0.23
 
-# Install server
-RUN yum install -y \
-    https://repo.mysql.com/mysql-cluster-community-minimal-release-el7.rpm \
-    https://repo.mysql.com/mysql-community-release-el7.rpm \
-  && yum-config-manager --enable mysql-cluster76-minimal \
-  && yum install -y \
-    $MYSQL_CLUSTER_PACKAGE \
-    $MYSQL_SHELL_PACKAGE \
-    libpwquality \
+# Setup repositories for minimal packages (all versions)
+RUN rpm -U https://repo.mysql.com/mysql-cluster-community-minimal-release-el7.rpm \
+  && rpm -U https://repo.mysql.com/mysql80-community-release-el7-1.noarch.rpm
+
+# Install server and shell 8.0
+RUN yum install -y $MYSQL_SHELL_PACKAGE \
+  && yum install -y $MYSQL_CLUSTER_PACKAGE --enablerepo=mysql-cluster76-minimal\
   && yum clean all \
   && mkdir /docker-entrypoint-initdb.d
 
-VOLUME /var/lib/mysql
+COPY prepare-image.sh /
+RUN /prepare-image.sh && rm -f /prepare-image.sh
+
+ENV MYSQL_UNIX_PORT /var/lib/mysql/mysql.sock
 
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY healthcheck.sh /healthcheck.sh
@@ -38,7 +39,7 @@ COPY cnf/my.cnf /etc/
 COPY cnf/mysql-cluster.cnf /etc/
 
 ENTRYPOINT ["/entrypoint.sh"]
-EXPOSE 3306 33060 2202 1186
 HEALTHCHECK CMD /healthcheck.sh
+EXPOSE 3306 33060 2202 1186
 CMD ["mysqld"]
 

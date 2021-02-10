@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2017, 2021, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,10 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
-
 set -e
 
-echo "[Entrypoint] MySQL Docker Image 7.5.21-1.1.19-cluster"
+echo "[Entrypoint] MySQL Docker Image 7.5.21-1.2.0"
 # Fetch value from server config
 # We use mysqld --verbose --help instead of my_print_defaults because the
 # latter only show values present in config files, and not server defaults
@@ -25,11 +24,30 @@ _get_config() {
 	"$@" --verbose --help 2>/dev/null | grep "^$conf" | awk '$1 == "'"$conf"'" { print $2; exit }'
 }
 
+# Generate a random password
+_mkpw() {
+	letter=$(cat /dev/urandom| tr -dc a-zA-Z | dd bs=1 count=16 2> /dev/null )
+	number=$(cat /dev/urandom| tr -dc 0-9 | dd bs=1 count=8 2> /dev/null)
+	special=$(cat /dev/urandom| tr -dc '=+@#%^&*_.,;:?/' | dd bs=1 count=8 2> /dev/null)
+
+	echo $letter$number$special | fold -w 1 | shuf | tr -d '\n'
+}
+
 # If command starts with an option, prepend mysqld
 # This allows users to add command-line options without
 # needing to specify the "mysqld" command
 if [ "${1:0:1}" = '-' ]; then
 	set -- mysqld "$@"
+fi
+
+# Check if entrypoint (and the container) is running as root
+if [ $(id -u) = "0" ]; then
+	is_root=1
+	install_devnull="install /dev/null -m0600 -omysql -gmysql"
+	MYSQLD_USER=mysql
+else
+	install_devnull="install /dev/null -m0600"
+	MYSQLD_USER=$(id -u)
 fi
 
 if [ "$1" = 'mysqld' ]; then
@@ -47,13 +65,6 @@ if [ "$1" = 'mysqld' ]; then
 	DATADIR="$(_get_config 'datadir' "$@")"
 	SOCKET="$(_get_config 'socket' "$@")"
 
-	if [ -n "$MYSQL_LOG_CONSOLE" ] || [ -n "console" ]; then
-		# Don't touch bind-mounted config files
-		if ! cat /proc/1/mounts | grep "etc/my.cnf"; then
-			sed -i 's/^log-error=/#&/' /etc/my.cnf
-		fi
-	fi
-
 	if [ ! -d "$DATADIR/mysql" ]; then
 		# If the password variable is a filename we use the contents of the file. We
 		# read this first to make sure that a proper error is generated for empty files.
@@ -70,27 +81,44 @@ if [ "$1" = 'mysqld' ]; then
 			MYSQL_RANDOM_ROOT_PASSWORD=true
 			MYSQL_ONETIME_PASSWORD=true
 		fi
-		mkdir -p "$DATADIR"
-		chown -R mysql:mysql "$DATADIR"
+		if [ ! -d "$DATADIR" ]; then
+			mkdir -p "$DATADIR"
+			chown mysql:mysql "$DATADIR"
+		fi
 
 		echo '[Entrypoint] Initializing database'
-		"$@" --initialize-insecure
+		"$@" --user=$MYSQLD_USER --initialize-insecure
 		echo '[Entrypoint] Database initialized'
 
-		"$@" --daemonize --skip-networking --socket="$SOCKET"
+		"$@" --user=$MYSQLD_USER --daemonize --skip-networking --socket="$SOCKET"
 
 		# To avoid using password on commandline, put it in a temporary file.
 		# The file is only populated when and if the root password is set.
 		PASSFILE=$(mktemp -u /var/lib/mysql-files/XXXXXXXXXX)
-		install /dev/null -m0600 -omysql -gmysql "$PASSFILE"
+		$install_devnull "$PASSFILE"
 		# Define the client command used throughout the script
 		# "SET @@SESSION.SQL_LOG_BIN=0;" is required for products like group replication to work properly
 		mysql=( mysql --defaults-extra-file="$PASSFILE" --protocol=socket -uroot -hlocalhost --socket="$SOCKET" --init-command="SET @@SESSION.SQL_LOG_BIN=0;")
 
-		mysql_tzinfo_to_sql /usr/share/zoneinfo | "${mysql[@]}" mysql
-		
+		if [ ! -z "" ];
+		then
+			for i in {30..0}; do
+				if mysqladmin --socket="$SOCKET" ping &>/dev/null; then
+					break
+				fi
+				echo '[Entrypoint] Waiting for server...'
+				sleep 1
+			done
+			if [ "$i" = 0 ]; then
+				echo >&2 '[Entrypoint] Timeout during MySQL init.'
+				exit 1
+			fi
+		fi
+
+		mysql_tzinfo_to_sql /usr/share/zoneinfo | %%SED_TZINFO%%"${mysql[@]}" mysql
+
 		if [ ! -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
-			MYSQL_ROOT_PASSWORD="$(pwmake 128)"
+			MYSQL_ROOT_PASSWORD="$(_mkpw)"
 			echo "[Entrypoint] GENERATED ROOT PASSWORD: $MYSQL_ROOT_PASSWORD"
 		fi
 		if [ -z "$MYSQL_ROOT_HOST" ]; then
@@ -121,13 +149,6 @@ EOF
 			mysql+=( "$MYSQL_DATABASE" )
 		fi
 
-		if [ -f "$MYSQL_PASSWORD" ]; then
-			MYSQL_PASSWORD="$(cat $MYSQL_PASSWORD)"
-			if [ -z "$MYSQL_PASSWORD" ]; then
-				echo >&2 '[Entrypoint] Empty MYSQL_PASSWORD file specified.'
-				exit 1
-			fi
-		fi
 		if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
 			echo "CREATE USER '"$MYSQL_USER"'@'%' IDENTIFIED BY '"$MYSQL_PASSWORD"' ;" | "${mysql[@]}"
 
@@ -156,21 +177,25 @@ EOF
 
 		# This needs to be done outside the normal init, since mysqladmin shutdown will not work after
 		if [ ! -z "$MYSQL_ONETIME_PASSWORD" ]; then
-			echo "[Entrypoint] Setting root user as expired. Password will need to be changed before database can be used."
-			SQL=$(mktemp -u /var/lib/mysql-files/XXXXXXXXXX)
-			install /dev/null -m0600 -omysql -gmysql "$SQL"
-			if [ ! -z "$MYSQL_ROOT_HOST" ]; then
-				cat << EOF > "$SQL"
-ALTER USER 'rootQL_ROOT_HOST}' PASSWORD EXPIRE;
-ALTER USER 'roothost' PASSWORD EXPIRE;
-EOF
+			if [ -z %%EXPIRE_SUPPORT%% ]; then
+				echo "[Entrypoint] User expiration is only supported in MySQL 5.6+"
 			else
-				cat << EOF > "$SQL"
-ALTER USER 'roothost' PASSWORD EXPIRE;
+				echo "[Entrypoint] Setting root user as expired. Password will need to be changed before database can be used."
+				SQL=$(mktemp -u /var/lib/mysql-files/XXXXXXXXXX)
+				$install_devnull "$SQL"
+				if [ ! -z "$MYSQL_ROOT_HOST" ]; then
+					cat << EOF > "$SQL"
+ALTER USER 'root'@'${MYSQL_ROOT_HOST}' PASSWORD EXPIRE;
+ALTER USER 'root'@'localhost' PASSWORD EXPIRE;
 EOF
+				else
+					cat << EOF > "$SQL"
+ALTER USER 'root'@'localhost' PASSWORD EXPIRE;
+EOF
+				fi
+				set -- "$@" --init-file="$SQL"
+				unset SQL
 			fi
-			set -- "$@" --init-file="$SQL"
-			unset SQL
 		fi
 
 		echo
@@ -181,41 +206,50 @@ EOF
 	# Used by healthcheck to make sure it doesn't mistakenly report container
 	# healthy during startup
 	# Put the password into the temporary config file
-	touch /healthcheck.cnf
-	cat >"/healthcheck.cnf" <<EOF
+	touch /var/lib/mysql-files/healthcheck.cnf
+	cat >"/var/lib/mysql-files/healthcheck.cnf" <<EOF
 [client]
 user=healthchecker
 socket=${SOCKET}
 password=healthcheckpass
 EOF
-	touch /mysql-init-complete
-	chown -R mysql:mysql "$DATADIR"
-	echo "[Entrypoint] Starting MySQL 7.5.21-1.1.19-cluster"
+	touch /var/lib/mysql-files/mysql-init-complete
 
-elif [ "$1" == "ndb_mgmd" ]; then
-	echo "[Entrypoint] Starting ndb_mgmd"
-	set -- "$@" -f /etc/mysql-cluster.cnf --nodaemon
-
-elif [ "$1" == "ndbd" ]; then
-	echo "[Entrypoint] Starting ndbd"
-	set -- "$@" --nodaemon
-
-elif [ "$1" == "ndbmtd" ]; then
-	echo "[Entrypoint] Starting ndbmtd"
-	set -- "$@" --nodaemon
-
-elif [ "$1" == "ndb_mgm" ]; then
-	echo "[Entrypoint] Starting ndb_mgm"
-
-elif [ "$1" == "ndb_waiter" ]; then
-	if [ "%%NDBWAITER%%" == "yes" ]; then
-		echo "[Entrypoint] Starting ndb_waiter"
-		set -- "$@" --nodaemon
+	if [ -n "$MYSQL_INITIALIZE_ONLY" ]; then
+		echo "[Entrypoint] MYSQL_INITIALIZE_ONLY is set, exiting without starting MySQL..."
+		exit 0
 	else
-		echo "[Entrypoint] ndb_waiter not supported"
-		exit 1
+		echo "[Entrypoint] Starting MySQL 7.5.21-1.2.0"
+	fi
+else
+	if [ -n "$MYSQL_INITIALIZE_ONLY" ]; then
+		echo "[Entrypoint] MySQL already initialized and MYSQL_INITIALIZE_ONLY is set, exiting without starting MySQL..."
+		exit 0
+	fi
+	if [ "$1" == "ndb_mgmd" ]; then
+		echo "[Entrypoint] Starting ndb_mgmd"
+		set -- "$@" -f /etc/mysql-cluster.cnf --nodaemon
+
+	elif [ "$1" == "ndbd" ]; then
+		echo "[Entrypoint] Starting ndbd"
+		set -- "$@" --nodaemon
+
+	elif [ "$1" == "ndbmtd" ]; then
+		echo "[Entrypoint] Starting ndbmtd"
+		set -- "$@" --nodaemon
+
+	elif [ "$1" == "ndb_mgm" ]; then
+		echo "[Entrypoint] Starting ndb_mgm"
+
+	elif [ "$1" == "ndb_waiter" ]; then
+		if [ "%%NDBWAITER%%" == "yes" ]; then
+			echo "[Entrypoint] Starting ndb_waiter"
+			set -- "$@" --nodaemon
+		else
+			echo "[Entrypoint] ndb_waiter not supported"
+			exit 1
+		fi
 	fi
 fi
 
-exec "$@"
-
+exec "$@" --user=$MYSQLD_USER
