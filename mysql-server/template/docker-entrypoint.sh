@@ -217,11 +217,7 @@ EOF
 	else
 		echo "[Entrypoint] Starting MySQL %%FULL_SERVER_VERSION%%"
 	fi
+	%%STARTUP%%
 else
-	if [ -n "$MYSQL_INITIALIZE_ONLY" ]; then
-		echo "[Entrypoint] MySQL already initialized and MYSQL_INITIALIZE_ONLY is set, exiting without starting MySQL..."
-		exit 0
-	fi
+	exec "$@"
 fi
-
-%%STARTUP%%
