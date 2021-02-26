@@ -32,7 +32,8 @@ The image uses the following optional variables:
 
 | Variable                 | Description                                 |
 | ------------------------ | ------------------------------------------- |
-| MYSQL_INNODB_CLUSTER_MEMBERS | The number of cluster instances to wait for |
+| MYSQL_INNODB_CLUSTER_MEMBERS | Wait for at least this number of cluster instances to be ONLINE |
+| MYSQL_CREATE_ROUTER_USER | Whether to create a new account for the Router to use when it's running. Defaults to 1, set to 0 to disable. |
 
 If supplied the run script waits for the given mysql host to be up, the InnoDB cluster to have
 MYSQL_INNODB_CLUSTER_MEMBERS members and then uses the given server for its
@@ -54,5 +55,23 @@ docker ps
 The following output should be displayed:
 
 ```
-4954b1c80be1 mysql-router:8.0 "/run.sh mysqlrouter" About a minute ago Up About a minute (healthy) 6447/tcp, 64460/tcp, 0.0.0.0:6446->6446/tcp, 64470/tcp innodbcluster_mysql-router_1
+4954b1c80be1 mysql-router:8.0 "/run.sh mysqlrouter" About a minute ago Up About a minute (healthy) 6447/tcp, 6448/tcp, 0.0.0.0:6446->6446/tcp, 6449/tcp innodbcluster_mysql-router_1
 ```
+
+# Exposed Ports
+
+The following TCP ports are exposed by the MySQL Router container:
+
+| Port  | Description
+| ----- | --------------------------------------------------------------------------------------- |
+| 6446  | R/W connection port. Clients that connect to this port will be forwarded to the PRIMARY |
+| 6447  | R/O connection port. Clients that connect to this port will be forwarded to a SECONDARY |
+| 6448  | X Protocol R/W connection port. R/W port for X protocol client connections              |
+| 6449  | X Protocol R/O connection port. R/O port for X protocol client connections              |
+| 8443  | HTTPS REST interface port.                                                              |
+
+For more information about the REST interface API, see:
+
+https://dev.mysql.com/doc/mysql-router/8.0/en/mysql-router-rest-api-reference.html
+
+

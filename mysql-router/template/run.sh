@@ -26,18 +26,20 @@ if [ "$1" = 'mysqlrouter' ]; then
 	    exit 1
     fi
 
+    PASSFILE=$(mktemp)
+    echo "$MYSQL_PASSWORD" > "$PASSFILE"
     if [ -z $MYSQL_CREATE_ROUTER_USER ]; then
+      echo "$MYSQL_PASSWORD" >> "$PASSFILE"
       MYSQL_CREATE_ROUTER_USER=1
       echo "[Entrypoint] MYSQL_CREATE_ROUTER_USER is not set, Router will generate a new account to be used at runtime."
       echo "[Entrypoint] Set it to 0 to reuse $MYSQL_USER instead."
     elif [ "$MYSQL_CREATE_ROUTER_USER" = "0" ]; then
+      echo "$MYSQL_PASSWORD" >> "$PASSFILE"
       echo "[Entrypoint] MYSQL_CREATE_ROUTER_USER is 0, Router will reuse $MYSQL_USER account at runtime"
     else
       echo "[Entrypoint] MYSQL_CREATE_ROUTER_USER is not 0, Router will generate a new account to be used at runtime"
     fi
 
-    PASSFILE=$(mktemp)
-    echo "$MYSQL_PASSWORD" > "$PASSFILE"
     DEFAULTS_EXTRA_FILE=$(mktemp)
     cat >"$DEFAULTS_EXTRA_FILE" <<EOF
 [client]
@@ -55,8 +57,8 @@ EOF
     done
     echo "[Entrypoint] Succesfully contacted mysql server at $MYSQL_HOST:$MYSQL_PORT. Checking for cluster state."
     if ! [[ "$(mysql --defaults-extra-file="$DEFAULTS_EXTRA_FILE" -u "$MYSQL_USER" -h "$MYSQL_HOST" -P "$MYSQL_PORT" -e "show status;" 2> /dev/null)" ]]; then
-	    echo "[Entrypoint] ERROR: Can not connect to database. Exiting."
-	    exit 1
+      echo "[Entrypoint] ERROR: Can not connect to database. Exiting."
+      exit 1
     fi
     if [[ -n $MYSQL_INNODB_CLUSTER_MEMBERS ]]; then
       attempt_num=0
@@ -71,13 +73,15 @@ EOF
       done
       echo "[Entrypoint] Successfully contacted cluster with $MYSQL_INNODB_CLUSTER_MEMBERS members. Bootstrapping."
     fi
-    echo "[Entrypoint] Succesfully contacted mysql server at $MYSQL_HOST. Trying to bootstrap."
+    if [ $(id -u) = "0" ]; then
+      opt_user=--user=mysqlrouter
+    fi
     if [ "$MYSQL_CREATE_ROUTER_USER" = "0" ]; then
         echo "[Entrypoint] Succesfully contacted mysql server at $MYSQL_HOST. Trying to bootstrap reusing account \"$MYSQL_USER\"."
-        mysqlrouter --bootstrap "$MYSQL_USER@$MYSQL_HOST:$MYSQL_PORT" --directory /tmp/mysqlrouter --force --account-create=never --account=$MYSQL_USER < "$PASSFILE"
+        mysqlrouter --bootstrap "$MYSQL_USER@$MYSQL_HOST:$MYSQL_PORT" --directory /tmp/mysqlrouter --force --account-create=never --account=$MYSQL_USER $opt_user < "$PASSFILE" || exit 1
     else
         echo "[Entrypoint] Succesfully contacted mysql server at $MYSQL_HOST. Trying to bootstrap."
-        mysqlrouter --bootstrap "$MYSQL_USER@$MYSQL_HOST:$MYSQL_PORT" --directory /tmp/mysqlrouter --force < "$PASSFILE"
+        mysqlrouter --bootstrap "$MYSQL_USER@$MYSQL_HOST:$MYSQL_PORT" --directory /tmp/mysqlrouter --force $opt_user < "$PASSFILE" || exit 1
     fi
 
     sed -i -e 's/logging_folder=.*$/logging_folder=/' /tmp/mysqlrouter/mysqlrouter.conf

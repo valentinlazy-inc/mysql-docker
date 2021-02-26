@@ -1,4 +1,4 @@
-# Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2018, 2021, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -12,24 +12,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
-FROM oraclelinux:7-slim
+FROM oraclelinux:8-slim
 
-ARG MYSQL_SERVER_PACKAGE=%%MYSQL_SERVER_PACKAGE%%
+ARG MYSQL_CLIENT_PACKAGE=%%MYSQL_CLIENT_PACKAGE%%
 ARG MYSQL_ROUTER_PACKAGE=%%MYSQL_ROUTER_PACKAGE%%
 
-RUN yum install -y %%REPO%%/mysql-community-minimal-release-el7.rpm \
-      %%REPO%%/mysql-community-release-el7.rpm \
-  && yum-config-manager --enable mysql%%REPO_VERSION%%-server-minimal \
-  && yum-config-manager --enable mysql-tools-community \
-  && yum install -y \
-      $MYSQL_SERVER_PACKAGE \
-      $MYSQL_ROUTER_PACKAGE \
-      libpwquality \
-  && yum clean all
+RUN rpm -U %%REPO%%/mysql%%REPO_VERSION%%-community-release-el8-1.noarch.rpm \
+  && microdnf install -y --disablerepo=ol8_appstream \
+     $MYSQL_CLIENT_PACKAGE $MYSQL_ROUTER_PACKAGE \
+  && microdnf clean all
 
 COPY run.sh /run.sh
 HEALTHCHECK \
 	CMD mysqladmin --port 6446 --protocol TCP ping 2>&1 | grep Access || exit 1
-EXPOSE 6446 6447 64460 64470
+EXPOSE 6446 6447 6448 6449 8443
 ENTRYPOINT ["/run.sh"]
 CMD ["mysqlrouter"]
