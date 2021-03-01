@@ -43,10 +43,7 @@ for MAJOR_VERSION in "${MAJOR_VERSIONS[@]}"; do
     done
     docker run -d --name mysql-server mysql/mysql-server:"$MAJOR_VERSION$ARCH_SUFFIX"
     inspec exec --no-color "$MAJOR_VERSION/inspec/control.rb" --controls container
-    inspec exec --no-color "$MAJOR_VERSION/inspec/control.rb" -t docker://mysql-server --controls server-package
-    if [ "${MAJOR_VERSION}" == "5.7" ] || [ "${MAJOR_VERSION}" == "8.0" ]; then
-      inspec exec "$MAJOR_VERSION/inspec/control.rb" -t docker://mysql-server --controls shell-package
-    fi
+    inspec exec --no-color "$MAJOR_VERSION/inspec/control.rb" -t docker://mysql-server --controls packages
     docker stop mysql-server
     docker rm mysql-server
 done
