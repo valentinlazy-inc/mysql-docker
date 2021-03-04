@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2018, 2021, Oracle and/or its affiliates.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ source ./VERSION
 
 for MAJOR_VERSION in "${!MYSQL_ROUTER_VERSIONS[@]}"
 do
-    docker run -d -e MYSQL_HOST=x -e MYSQL_PORT=9 -e MYSQL_USER=x -e MYSQL_PASSWORD=x -e MYSQL_INNODB_NUM_MEMBERS=1 --name mysql-router mysql/mysql-router:$MAJOR_VERSION sleep 5000
+    docker run -d -e MYSQL_HOST=x -e MYSQL_PORT=9 -e MYSQL_USER=x -e MYSQL_PASSWORD=x -e MYSQL_INNODB_CLUSTER_MEMBERS=1 --name mysql-router mysql/mysql-router:$MAJOR_VERSION sleep 5000
     inspec exec $MAJOR_VERSION/inspec/control.rb --controls container
     inspec exec $MAJOR_VERSION/inspec/control.rb -t docker://mysql-router --controls packages
     docker stop mysql-router

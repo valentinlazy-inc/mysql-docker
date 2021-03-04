@@ -87,11 +87,10 @@ EOF
     sed -i -e 's/logging_folder=.*$/logging_folder=/' /tmp/mysqlrouter/mysqlrouter.conf
     echo "[Entrypoint] Starting mysql-router."
     exec "$@" --config /tmp/mysqlrouter/mysqlrouter.conf
+
+    rm -f "$PASSFILE"
+    rm -f "$DEFAULTS_EXTRA_FILE"
+    unset DEFAULTS_EXTRA_FILE
+else
+    exec "$@"
 fi
-
-rm -f "$PASSFILE"
-rm -f "$DEFAULTS_EXTRA_FILE"
-unset DEFAULTS_EXTRA_FILE
-
-exec "$@"
-
