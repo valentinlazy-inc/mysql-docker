@@ -87,10 +87,10 @@ if [ "$1" = 'mysqld' ]; then
 		fi
 
 		echo '[Entrypoint] Initializing database'
-		%%DATABASE_INIT%%
-		echo '[Entrypoint] Database initialized'
+		"$@" --user=$MYSQLD_USER --initialize-insecure
 
-		%%INIT_STARTUP%%
+		echo '[Entrypoint] Database initialized'
+		"$@" --user=$MYSQLD_USER --daemonize --skip-networking --socket="$SOCKET"
 
 		# To avoid using password on commandline, put it in a temporary file.
 		# The file is only populated when and if the root password is set.
@@ -100,19 +100,16 @@ if [ "$1" = 'mysqld' ]; then
 		# "SET @@SESSION.SQL_LOG_BIN=0;" is required for products like group replication to work properly
 		mysql=( mysql --defaults-extra-file="$PASSFILE" --protocol=socket -uroot -hlocalhost --socket="$SOCKET" --init-command="SET @@SESSION.SQL_LOG_BIN=0;")
 
-		if [ ! -z %%STARTUP_WAIT%% ];
-		then
-			for i in {30..0}; do
-				if mysqladmin --socket="$SOCKET" ping &>/dev/null; then
-					break
-				fi
-				echo '[Entrypoint] Waiting for server...'
-				sleep 1
-			done
-			if [ "$i" = 0 ]; then
-				echo >&2 '[Entrypoint] Timeout during MySQL init.'
-				exit 1
+		for i in {30..0}; do
+			if mysqladmin --socket="$SOCKET" ping &>/dev/null; then
+				break
 			fi
+			echo '[Entrypoint] Waiting for server...'
+			sleep 1
+		done
+		if [ "$i" = 0 ]; then
+			echo >&2 '[Entrypoint] Timeout during MySQL init.'
+			exit 1
 		fi
 
 		mysql_tzinfo_to_sql /usr/share/zoneinfo | "${mysql[@]}" mysql
@@ -217,7 +214,9 @@ EOF
 	else
 		echo "[Entrypoint] Starting MySQL %%FULL_SERVER_VERSION%%"
 	fi
-	%%STARTUP%%
+	# 4th value of /proc/$pid/stat is the ppid, same as getppid()
+	export MYSQLD_PARENT_PID=$(cat /proc/$$/stat|cut -d\  -f4)
+	exec "$@" --user=$MYSQLD_USER
 else
 	exec "$@"
 fi

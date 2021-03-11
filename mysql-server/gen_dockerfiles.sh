@@ -32,24 +32,6 @@ declare -A PASSWORDSET
 PASSWORDSET["5.7"]="ALTER USER 'root'@'localhost' IDENTIFIED BY '\${MYSQL_ROOT_PASSWORD}';"
 PASSWORDSET["8.0"]=${PASSWORDSET["5.7"]}
 
-declare -A DATABASE_INIT
-DATABASE_INIT["5.7"]="\"\$@\" --user=\$MYSQLD_USER --initialize-insecure"
-DATABASE_INIT["8.0"]="\"\$@\" --user=\$MYSQLD_USER --initialize-insecure"
-
-# 5.7+ has the --daemonize flag, which makes the process fork and then exit when
-# the server is ready, removing the need for a fragile wait loop
-declare -A INIT_STARTUP
-INIT_STARTUP["5.7"]="\"\$@\" --user=\$MYSQLD_USER --daemonize --skip-networking --socket=\"\$SOCKET\""
-INIT_STARTUP["8.0"]="\"\$@\" --user=\$MYSQLD_USER --daemonize --skip-networking --socket=\"\$SOCKET\""
-
-declare -A STARTUP
-STARTUP["5.7"]="exec \"\$@\" --user=\$MYSQLD_USER"
-STARTUP["8.0"]="export MYSQLD_PARENT_PID=\$\$ ; exec \"\$@\" --user=\$MYSQLD_USER"
-
-declare -A STARTUP_WAIT
-STARTUP_WAIT["5.7"]="\"\""
-STARTUP_WAIT["8.0"]="\"\""
-
 # MySQL 8.0 supports a call to validate the config, while older versions have it as a side
 # effect of running --verbose --help
 declare -A VALIDATE_CONFIG
@@ -98,10 +80,6 @@ do
 
   # Entrypoint
   sed 's#%%PASSWORDSET%%#'"${PASSWORDSET[${VERSION}]}"'#g' template/docker-entrypoint.sh > tmpfile
-  sed -i 's#%%DATABASE_INIT%%#'"${DATABASE_INIT[${VERSION}]}"'#g' tmpfile
-  sed -i 's#%%INIT_STARTUP%%#'"${INIT_STARTUP[${VERSION}]}"'#g' tmpfile
-  sed -i 's#%%STARTUP%%#'"${STARTUP[${VERSION}]}"'#g' tmpfile
-  sed -i 's#%%STARTUP_WAIT%%#'"${STARTUP_WAIT[${VERSION}]}"'#g' tmpfile
   sed -i 's#%%FULL_SERVER_VERSION%%#'"${FULL_SERVER_VERSIONS[${VERSION}]}"'#g' tmpfile
   sed -i 's#%%VALIDATE_CONFIG%%#'"${VALIDATE_CONFIG[${VERSION}]}"'#g' tmpfile
   mv tmpfile ${VERSION}/docker-entrypoint.sh

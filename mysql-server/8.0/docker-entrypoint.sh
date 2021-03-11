@@ -224,4 +224,4 @@ else
 	fi
 fi
 
-export MYSQLD_PARENT_PID=$$ ; exec "$@" --user=$MYSQLD_USER
+export MYSQLD_PARENT_PID=$(cat /proc/$$/stat|cut -d\  -f4) ; exec "$@" --user=$MYSQLD_USER
