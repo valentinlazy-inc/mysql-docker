@@ -71,6 +71,7 @@ do
   fi
   sed 's#%%MYSQL_SERVER_VERSION%%#'"${MYSQL_SERVER_VERSIONS[${VERSION}]}"'#g' template/control.rb > tmpFile
   sed -i 's#%%MYSQL_SHELL_VERSION%%#'"${MYSQL_SHELL_VERSIONS[${VERSION}]}"'#g' tmpFile
+  sed -i 's#%%MAJOR_VERSION%%#'"${VERSION}"'#g' tmpFile
   if [ "${VERSION}" == "5.7" ]; then
     sed -i 's#%%PORTS%%#'"3306/tcp, 33060/tcp"'#g' tmpFile
   else

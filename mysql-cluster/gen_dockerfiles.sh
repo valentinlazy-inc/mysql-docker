@@ -92,6 +92,7 @@ do
   fi
   sed 's#%%MYSQL_CLUSTER_VERSION%%#'"${MYSQL_CLUSTER_VERSIONS[${VERSION}]}"'#g' template/control.rb > tmpFile
   sed -i 's#%%MYSQL_SHELL_VERSION%%#'"${MYSQL_SHELL_VERSIONS[${VERSION}]}"'#g' tmpFile
+  sed -i 's#%%MAJOR_VERSION%%#'"${VERSION}"'#g' tmpFile
   mv tmpFile "${VERSION}/inspec/control.rb"
 
   # Entrypoint

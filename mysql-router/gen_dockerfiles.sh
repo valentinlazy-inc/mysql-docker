@@ -16,6 +16,7 @@ for MAJOR_VERSION in "${!MYSQL_ROUTER_VERSIONS[@]}"; do
     # update test template
     sed -e 's#%%MYSQL_CLIENT_PACKAGE_VERSION%%#'"${MYSQL_SERVER_VERSIONS[${MAJOR_VERSION}]}"'#g' template/control.rb > tmpFile
     sed -i -e 's#%%MYSQL_ROUTER_PACKAGE_VERSION%%#'"${MYSQL_ROUTER_VERSIONS[${MAJOR_VERSION}]}"'#g' tmpFile
+    sed -i -e 's#%%MAJOR_VERSION%%#'"${MAJOR_VERSION}"'#g' tmpFile
     if [ ! -d "${MAJOR_VERSION}/inspec" ]; then
       mkdir "${MAJOR_VERSION}/inspec"
     fi

@@ -22,9 +22,9 @@ source ./VERSION
 
 for MAJOR_VERSION in "${!MYSQL_ROUTER_VERSIONS[@]}"
 do
-    docker run -d -e MYSQL_HOST=x -e MYSQL_PORT=9 -e MYSQL_USER=x -e MYSQL_PASSWORD=x -e MYSQL_INNODB_CLUSTER_MEMBERS=1 --name mysql-router mysql/mysql-router:$MAJOR_VERSION sleep 5000
+    docker run -d -e MYSQL_HOST=x -e MYSQL_PORT=9 -e MYSQL_USER=x -e MYSQL_PASSWORD=x -e MYSQL_INNODB_CLUSTER_MEMBERS=1 --name "mysql-router-$MAJOR_VERSION" mysql/mysql-router:$MAJOR_VERSION sleep 5000
     inspec exec $MAJOR_VERSION/inspec/control.rb --controls container
-    inspec exec $MAJOR_VERSION/inspec/control.rb -t docker://mysql-router --controls packages
-    docker stop mysql-router
-    docker rm mysql-router
+    inspec exec $MAJOR_VERSION/inspec/control.rb -t "docker://mysql-router-$MAJOR_VERSION" --controls packages
+    docker stop "mysql-router-$MAJOR_VERSION"
+    docker rm "mysql-router-$MAJOR_VERSION"
 done

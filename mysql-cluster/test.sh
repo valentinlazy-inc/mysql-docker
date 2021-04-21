@@ -23,9 +23,9 @@ source VERSION
 MAJOR_VERSIONS=("${!MYSQL_CLUSTER_VERSIONS[@]}"); [ -n "$1" ] && MAJOR_VERSIONS=("${@:1}")
 
 for MAJOR_VERSION in "${MAJOR_VERSIONS[@]}"; do
-    docker run -d -e MYSQL_RANDOM_ROOT_PASSWORD=true --name mysql-cluster mysql/mysql-cluster:$MAJOR_VERSION --log-error
+    docker run -d -e MYSQL_RANDOM_ROOT_PASSWORD=true --name "mysql-cluster-$MAJOR_VERSION" "mysql/mysql-cluster:$MAJOR_VERSION" --log-error
     inspec exec --no-color $MAJOR_VERSION/inspec/control.rb --controls container
-    inspec exec --no-color $MAJOR_VERSION/inspec/control.rb -t docker://mysql-cluster --controls packages
-    docker stop mysql-cluster
-    docker rm mysql-cluster
+    inspec exec --no-color $MAJOR_VERSION/inspec/control.rb -t "docker://mysql-cluster-$MAJOR_VERSION" --controls packages
+    docker stop "mysql-cluster-$MAJOR_VERSION"
+    docker rm "mysql-cluster-$MAJOR_VERSION"
 done

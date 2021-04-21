@@ -1,6 +1,6 @@
 control 'container' do
   impact 0.5
-  describe docker_container('mysql-server') do
+  describe docker_container('mysql-server-%%MAJOR_VERSION%%') do
     it { should exist }
     it { should be_running }
     its('repo') { should eq 'mysql/mysql-server' }
