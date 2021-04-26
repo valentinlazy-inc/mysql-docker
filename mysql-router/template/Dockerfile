@@ -17,7 +17,7 @@ FROM oraclelinux:8-slim
 ARG MYSQL_CLIENT_PACKAGE=%%MYSQL_CLIENT_PACKAGE%%
 ARG MYSQL_ROUTER_PACKAGE=%%MYSQL_ROUTER_PACKAGE%%
 
-RUN rpm -U %%REPO%%/mysql%%REPO_VERSION%%-community-release-el8-1.noarch.rpm \
+RUN rpm -U %%REPO%%/mysql%%REPO_VERSION%%-community-release-el8.rpm \
   && microdnf install -y --disablerepo=ol8_appstream \
      $MYSQL_CLIENT_PACKAGE $MYSQL_ROUTER_PACKAGE \
   && microdnf clean all
