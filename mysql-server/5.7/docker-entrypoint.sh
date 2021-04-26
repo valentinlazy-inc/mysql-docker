@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 set -e
 
-echo "[Entrypoint] MySQL Docker Image 5.7.34-1.2.0"
+echo "[Entrypoint] MySQL Docker Image 5.7.34-1.2.2-server"
 # Fetch value from server config
 # We use mysqld --verbose --help instead of my_print_defaults because the
 # latter only show values present in config files, and not server defaults
@@ -88,8 +88,8 @@ if [ "$1" = 'mysqld' ]; then
 
 		echo '[Entrypoint] Initializing database'
 		"$@" --user=$MYSQLD_USER --initialize-insecure
-		echo '[Entrypoint] Database initialized'
 
+		echo '[Entrypoint] Database initialized'
 		"$@" --user=$MYSQLD_USER --daemonize --skip-networking --socket="$SOCKET"
 
 		# To avoid using password on commandline, put it in a temporary file.
@@ -100,19 +100,16 @@ if [ "$1" = 'mysqld' ]; then
 		# "SET @@SESSION.SQL_LOG_BIN=0;" is required for products like group replication to work properly
 		mysql=( mysql --defaults-extra-file="$PASSFILE" --protocol=socket -uroot -hlocalhost --socket="$SOCKET" --init-command="SET @@SESSION.SQL_LOG_BIN=0;")
 
-		if [ ! -z "" ];
-		then
-			for i in {30..0}; do
-				if mysqladmin --socket="$SOCKET" ping &>/dev/null; then
-					break
-				fi
-				echo '[Entrypoint] Waiting for server...'
-				sleep 1
-			done
-			if [ "$i" = 0 ]; then
-				echo >&2 '[Entrypoint] Timeout during MySQL init.'
-				exit 1
+		for i in {30..0}; do
+			if mysqladmin --socket="$SOCKET" ping &>/dev/null; then
+				break
 			fi
+			echo '[Entrypoint] Waiting for server...'
+			sleep 1
+		done
+		if [ "$i" = 0 ]; then
+			echo >&2 '[Entrypoint] Timeout during MySQL init.'
+			exit 1
 		fi
 
 		mysql_tzinfo_to_sql /usr/share/zoneinfo | "${mysql[@]}" mysql
@@ -215,13 +212,11 @@ EOF
 		echo "[Entrypoint] MYSQL_INITIALIZE_ONLY is set, exiting without starting MySQL..."
 		exit 0
 	else
-		echo "[Entrypoint] Starting MySQL 5.7.34-1.2.0"
+		echo "[Entrypoint] Starting MySQL 5.7.34-1.2.2-server"
 	fi
+	# 4th value of /proc/$pid/stat is the ppid, same as getppid()
+	export MYSQLD_PARENT_PID=$(cat /proc/$$/stat|cut -d\  -f4)
+	exec "$@" --user=$MYSQLD_USER
 else
-	if [ -n "$MYSQL_INITIALIZE_ONLY" ]; then
-		echo "[Entrypoint] MySQL already initialized and MYSQL_INITIALIZE_ONLY is set, exiting without starting MySQL..."
-		exit 0
-	fi
+	exec "$@"
 fi
-
-exec "$@" --user=$MYSQLD_USER
