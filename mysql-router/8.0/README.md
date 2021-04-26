@@ -74,4 +74,6 @@ For more information about the REST interface API, see:
 
 https://dev.mysql.com/doc/mysql-router/8.0/en/mysql-router-rest-api-reference.html
 
+For full usage documentation, see:
 
+https://dev.mysql.com/doc/mysql-router/8.0/en/mysql-router-installation-docker.html

@@ -1,6 +1,6 @@
 control 'container' do
   impact 0.5
-  describe docker_container('mysql-router') do
+  describe docker_container('mysql-router-8.0') do
     it { should exist }
     it { should be_running }
     its('repo') { should eq 'mysql/mysql-router' }
@@ -10,8 +10,12 @@ control 'container' do
 end
 control 'packages' do
   impact 0.5
+  describe package('mysql-community-client') do
+    it { should be_installed }
+    its ('version') { should match '8.0.24.*' }
+  end
   describe package('mysql-router-community') do
     it { should be_installed }
-    its ('version') { should match '8.0.23.*' }
+    its ('version') { should match '8.0.24.*' }
   end
 end

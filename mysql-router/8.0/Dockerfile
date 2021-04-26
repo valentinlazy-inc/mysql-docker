@@ -14,10 +14,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 FROM oraclelinux:8-slim
 
-ARG MYSQL_CLIENT_PACKAGE=mysql-community-client-8.0.23
-ARG MYSQL_ROUTER_PACKAGE=mysql-router-community-8.0.23
+ARG MYSQL_CLIENT_PACKAGE=mysql-community-client-8.0.24
+ARG MYSQL_ROUTER_PACKAGE=mysql-router-community-8.0.24
 
-RUN rpm -U http://repo.no.oracle.com/mysql-weekly/repos-stage/mysql80-community-release-el8-1.noarch.rpm \
+RUN rpm -U https://repo.mysql.com/mysql80-community-release-el8.rpm \
   && microdnf install -y --disablerepo=ol8_appstream \
      $MYSQL_CLIENT_PACKAGE $MYSQL_ROUTER_PACKAGE \
   && microdnf clean all
