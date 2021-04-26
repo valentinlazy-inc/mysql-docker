@@ -1,6 +1,6 @@
 control 'container' do
   impact 0.5
-  describe docker_container('mysql-cluster') do
+  describe docker_container('mysql-cluster-8.0') do
     it { should exist }
     it { should be_running }
     its('repo') { should eq 'mysql/mysql-cluster' }
