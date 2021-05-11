@@ -115,7 +115,7 @@ if [ "$1" = 'mysqld' ]; then
 			fi
 		fi
 
-		mysql_tzinfo_to_sql /usr/share/zoneinfo | %%SED_TZINFO%%"${mysql[@]}" mysql
+		mysql_tzinfo_to_sql /usr/share/zoneinfo | "${mysql[@]}" mysql
 
 		if [ ! -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
 			MYSQL_ROOT_PASSWORD="$(_mkpw)"
