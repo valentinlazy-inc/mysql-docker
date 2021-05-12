@@ -15,7 +15,7 @@
 FROM oraclelinux:7-slim
 
 ARG MYSQL_SERVER_PACKAGE=mysql-community-server-minimal-5.7.34
-ARG MYSQL_SHELL_PACKAGE=mysql-shell-8.0.24
+ARG MYSQL_SHELL_PACKAGE=mysql-shell-8.0.25
 
 # Setup repositories for minimal packages (all versions)
 RUN rpm -U https://repo.mysql.com/mysql-community-minimal-release-el7.rpm \
