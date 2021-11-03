@@ -27,6 +27,7 @@ RUN microdnf update && echo "[main]" > /etc/dnf/dnf.conf \
   && microdnf install -y $MYSQL_SHELL_PACKAGE \
   && microdnf install -y --disablerepo=ol8_appstream \
    --enablerepo=mysql%%REPO_VERSION%%-server-minimal $MYSQL_SERVER_PACKAGE \
+  && rpm --nodeps -e python36 \
   && microdnf clean all \
   && mkdir /docker-entrypoint-initdb.d
 
