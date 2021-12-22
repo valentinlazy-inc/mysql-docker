@@ -22,7 +22,12 @@ if [ "$1" = 'mysqlrouter' ]; then
 	    echo "    MYSQL_PORT"
 	    echo "    MYSQL_USER"
 	    echo "    MYSQL_PASSWORD"
-	    echo "to be set. Exiting."
+	    echo "to be set."
+	    echo "In addition you can set"
+	    echo "    MYSQL_INNODB_CLUSTER_MEMBERS "
+	    echo "    MYSQL_CREATE_ROUTER_USER"
+	    echo "    MYSQL_ROUTER_BOOTSTRAP_EXTRA_OPTIONS"
+	    echo "Exiting."
 	    exit 1
     fi
 
@@ -78,10 +83,10 @@ EOF
     fi
     if [ "$MYSQL_CREATE_ROUTER_USER" = "0" ]; then
         echo "[Entrypoint] Succesfully contacted mysql server at $MYSQL_HOST. Trying to bootstrap reusing account \"$MYSQL_USER\"."
-        mysqlrouter --bootstrap "$MYSQL_USER@$MYSQL_HOST:$MYSQL_PORT" --directory /tmp/mysqlrouter --force --account-create=never --account=$MYSQL_USER $opt_user < "$PASSFILE" || exit 1
+        mysqlrouter --bootstrap "$MYSQL_USER@$MYSQL_HOST:$MYSQL_PORT" --directory /tmp/mysqlrouter --force --account-create=never --account=$MYSQL_USER $opt_user $MYSQL_ROUTER_BOOTSTRAP_EXTRA_OPTIONS < "$PASSFILE" || exit 1
     else
         echo "[Entrypoint] Succesfully contacted mysql server at $MYSQL_HOST. Trying to bootstrap."
-        mysqlrouter --bootstrap "$MYSQL_USER@$MYSQL_HOST:$MYSQL_PORT" --directory /tmp/mysqlrouter --force $opt_user < "$PASSFILE" || exit 1
+        mysqlrouter --bootstrap "$MYSQL_USER@$MYSQL_HOST:$MYSQL_PORT" --directory /tmp/mysqlrouter --force $opt_user $MYSQL_ROUTER_BOOTSTRAP_EXTRA_OPTIONS < "$PASSFILE" || exit 1
     fi
 
     sed -i -e 's/logging_folder=.*$/logging_folder=/' /tmp/mysqlrouter/mysqlrouter.conf
