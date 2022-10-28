@@ -28,8 +28,9 @@ CONFIG_PACKAGE_NAME_MINIMAL=mysql-community-minimal-release-el8.rpm; [ -n "$3" ]
 REPO_NAME_SERVER=mysql80-community-minimal; [ -n "$4" ] && REPO_NAME_SERVER=$4
 REPO_NAME_TOOLS=mysql-tools-community; [ -n "$5" ] && REPO_NAME_TOOLS=$5
 
-MYSQL_SERVER_PACKAGE_OVERRIDE=""; [ -n "$6" ] && MYSQL_SERVER_PACKAGE_OVERRIDE=$6
-MYSQL_SHELL_PACKAGE_OVERRIDE=""; [ -n "$7" ] && MYSQL_SHELL_PACKAGE_OVERRIDE=$7
+MYSQL_SERVER_PACKAGE_NAME="mysql-community-server-minimal"; [ -n "$6" ] && MYSQL_SERVER_PACKAGE_NAME=$6
+MYSQL_SHELL_PACKAGE_NAME="mysql-shell"; [ -n "$7" ] && MYSQL_SHELL_PACKAGE_NAME=$7
+MYSQL_VERSION=""; [ -n "$8" ] && MYSQL_VERSION=$8
 # 33060 is the default port for the mysqlx plugin, new to 5.7
 declare -A PORTS
 PORTS["5.7"]="3306 33060"
@@ -52,15 +53,14 @@ PRECREATE_DIRS["8.0"]="/var/lib/mysql /var/lib/mysql-files /var/lib/mysql-keyrin
 
 for VERSION in "${!MYSQL_SERVER_VERSIONS[@]}"
 do
-  if [ -z "${MYSQL_SERVER_PACKAGE_OVERRIDE}" ]; then
-    MYSQL_SERVER_PACKAGE=mysql-community-server-minimal-${MYSQL_SERVER_VERSIONS[${VERSION}]}
+  if [ -n "${MYSQL_VERSION}" ]; then
+    MYSQL_SERVER_PACKAGE=${MYSQL_SERVER_PACKAGE_NAME}-${MYSQL_VERSION}
+    MYSQL_SHELL_PACKAGE=${MYSQL_SHELL_PACKAGE_NAME}-${MYSQL_VERSION}
+    TEST_VERSION="true"
   else
-    MYSQL_SERVER_PACKAGE=${MYSQL_SERVER_PACKAGE_OVERRIDE}
-  fi
-  if [ -z "${MYSQL_SHELL_PACKAGE_OVERRIDE}" ]; then
-    MYSQL_SHELL_PACKAGE=mysql-shell-${MYSQL_SHELL_VERSIONS[${VERSION}]}
-  else
-    MYSQL_SHELL_PACKAGE=${MYSQL_SHELL_PACKAGE_OVERRIDE}
+    MYSQL_SERVER_PACKAGE=${MYSQL_SERVER_PACKAGE_NAME}
+    MYSQL_SHELL_PACKAGE=${MYSQL_SHELL_PACKAGE_NAME}
+    TEST_VERSION="false"
   fi
   # Dockerfiles
   MYSQL_SERVER_REPOPATH=yum/mysql-$VERSION-community/docker/x86_64
@@ -93,6 +93,9 @@ do
   fi
   sed 's#%%MYSQL_SERVER_VERSION%%#'"${MYSQL_SERVER_VERSIONS[${VERSION}]}"'#g' template/control.rb > tmpFile
   sed -i 's#%%MYSQL_SHELL_VERSION%%#'"${MYSQL_SHELL_VERSIONS[${VERSION}]}"'#g' tmpFile
+  sed -i 's#%%MYSQL_SERVER_PACKAGE_NAME%%#'"${MYSQL_SERVER_PACKAGE_NAME}"'#g' tmpFile
+  sed -i 's#%%MYSQL_SHELL_PACKAGE_NAME%%#'"${MYSQL_SHELL_PACKAGE_NAME}"'#g' tmpFile
+  sed -i 's#%%TEST_VERSION%%#'"${TEST_VERSION}"'#g' tmpFile
   sed -i 's#%%MAJOR_VERSION%%#'"${VERSION}"'#g' tmpFile
   if [ "${VERSION}" == "5.7" ]; then
     sed -i 's#%%PORTS%%#'"3306/tcp, 33060/tcp"'#g' tmpFile
