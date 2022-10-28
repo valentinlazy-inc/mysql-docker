@@ -56,11 +56,9 @@ do
   if [ -n "${MYSQL_VERSION}" ]; then
     MYSQL_SERVER_PACKAGE=${MYSQL_SERVER_PACKAGE_NAME}-${MYSQL_VERSION}
     MYSQL_SHELL_PACKAGE=${MYSQL_SHELL_PACKAGE_NAME}-${MYSQL_VERSION}
-    TEST_VERSION="true"
   else
     MYSQL_SERVER_PACKAGE=${MYSQL_SERVER_PACKAGE_NAME}
     MYSQL_SHELL_PACKAGE=${MYSQL_SHELL_PACKAGE_NAME}
-    TEST_VERSION="false"
   fi
   # Dockerfiles
   MYSQL_SERVER_REPOPATH=yum/mysql-$VERSION-community/docker/x86_64
@@ -91,11 +89,9 @@ do
   if [ ! -d "${VERSION}/inspec" ]; then
     mkdir "${VERSION}/inspec"
   fi
-  sed 's#%%MYSQL_SERVER_VERSION%%#'"${MYSQL_SERVER_VERSIONS[${VERSION}]}"'#g' template/control.rb > tmpFile
-  sed -i 's#%%MYSQL_SHELL_VERSION%%#'"${MYSQL_SHELL_VERSIONS[${VERSION}]}"'#g' tmpFile
+  sed 's#%%MYSQL_VERSION%%#'"${MYSQL_VERSION}"'#g' template/control.rb > tmpFile
   sed -i 's#%%MYSQL_SERVER_PACKAGE_NAME%%#'"${MYSQL_SERVER_PACKAGE_NAME}"'#g' tmpFile
   sed -i 's#%%MYSQL_SHELL_PACKAGE_NAME%%#'"${MYSQL_SHELL_PACKAGE_NAME}"'#g' tmpFile
-  sed -i 's#%%TEST_VERSION%%#'"${TEST_VERSION}"'#g' tmpFile
   sed -i 's#%%MAJOR_VERSION%%#'"${VERSION}"'#g' tmpFile
   if [ "${VERSION}" == "5.7" ]; then
     sed -i 's#%%PORTS%%#'"3306/tcp, 33060/tcp"'#g' tmpFile

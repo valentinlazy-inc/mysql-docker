@@ -8,22 +8,14 @@ control 'container' do
     its('command') { should match '/entrypoint.sh mysqld' }
   end
 end
-control 'packages installed' do
+control 'packages' do
   impact 0.5
   describe package('%%MYSQL_SERVER_PACKAGE_NAME%%') do
     it { should be_installed }
+    its ('version') { should match '%%MYSQL_VERSION%%.*' }
   end
   describe package('%%MYSQL_SHELL_PACKAGE_NAME%%') do
     it { should be_installed }
+    its ('version') { should match '%%MYSQL_VERSION%%.*' }
   end
-end
-control 'packages correct version' do
-  impact 0.5
-  describe package('%%MYSQL_SERVER_PACKAGE_NAME%%') do
-    its ('version') { should match '%%MYSQL_SERVER_VERSION%%.*' }
-  end
-  describe package('%%MYSQL_SHELL_PACKAGE_NAME%%') do
-    its ('version') { should match '%%MYSQL_SHELL_VERSION%%.*' }
-  end
-  only_if {%%TEST_VERSION%%}
 end
