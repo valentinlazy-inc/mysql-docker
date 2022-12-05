@@ -116,7 +116,7 @@ do
   if [ "${VERSION}" == "8.0" ]; then
     sed -i 's#%%PORTS%%#'"1186/tcp, 2202/tcp, 3306/tcp, 33060-33061/tcp"'#g' tmpFile
   else
-    sed -i 's#%%PORTS%%#'"1186/tcp, 2202/tcp, 3306/tcp"'#g' tmpFile
+    sed -i 's#%%PORTS%%#'"1186/tcp, 2202/tcp, 3306/tcp, 33060/tcp"'#g' tmpFile
   fi
   mv tmpFile "${VERSION}/inspec/control.rb"
 
