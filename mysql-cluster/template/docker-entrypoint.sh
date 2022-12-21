@@ -86,7 +86,6 @@ if [ "$1" = 'mysqld' ]; then
 			chown mysql:mysql "$DATADIR"
 		fi
 
-				
 		# The user can set a default_timezone either in a my.cnf file
 		# they mount into the container or on command line
 		# (`docker run mysql/mysql-server:8.0 --default-time-zone=Europe/Berlin`)
