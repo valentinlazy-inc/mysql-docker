@@ -13,7 +13,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-FROM oraclelinux:8-slim
+FROM container-registry.oracle.com/os/oraclelinux:8-slim
 
 ARG MYSQL_SERVER_PACKAGE=%%MYSQL_SERVER_PACKAGE%%
 ARG MYSQL_SHELL_PACKAGE=%%MYSQL_SHELL_PACKAGE%%
