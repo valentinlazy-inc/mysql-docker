@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2018, 2023 Oracle and/or its affiliates. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,9 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 set -e
 source ./VERSION
+
+ARCH=amd64; [ -n "$1" ] && ARCH=$1
+
 for MAJOR_VERSION in "${!MYSQL_ROUTER_VERSIONS[@]}"; do
-  docker build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$http_proxy --build-arg no_proxy=$no_proxy -t mysql/mysql-router:$MAJOR_VERSION $MAJOR_VERSION
+  docker build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$http_proxy --build-arg no_proxy=$no_proxy -t mysql/mysql-router:$MAJOR_VERSION-$ARCH $MAJOR_VERSION
 done
