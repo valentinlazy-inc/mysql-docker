@@ -1,11 +1,10 @@
 control 'container' do
   impact 0.5
-  describe docker_container('mysql-server-%%MAJOR_VERSION%%') do
-    it { should exist }
-    it { should be_running }
-    its('repo') { should eq 'mysql/mysql-server' }
-    its('ports') { should eq '%%PORTS%%' }
-    its('command') { should match '/entrypoint.sh mysqld' }
+  describe podman.containers do
+    its('status') { should cmp /Up/ }
+    its('commands') { should cmp /mysqld/ }
+    its('images') { should cmp /mysql-server:%%MAJOR_VERSION%%/ }
+    its('names') { should include "mysql-server-%%MAJOR_VERSION%%" }
   end
 end
 control 'packages' do

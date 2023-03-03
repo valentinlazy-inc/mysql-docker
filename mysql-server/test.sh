@@ -35,15 +35,20 @@ MAJOR_VERSIONS=("${!MYSQL_SERVER_VERSIONS[@]}"); [ -n "$2" ] && MAJOR_VERSIONS=(
 
 
 for MAJOR_VERSION in "${MAJOR_VERSIONS[@]}"; do
-    ARCH_SUFFIX="" 
+    ARCH_SUFFIX=""
     for MULTIARCH_VERSION in ${MULTIARCH_VERSIONS}; do
       if [[ "$MULTIARCH_VERSION" == "$MAJOR_VERSION" ]]; then
         ARCH_SUFFIX="-$ARCH"
       fi
     done
-    docker run -d --name "mysql-server-$MAJOR_VERSION" mysql/mysql-server:"$MAJOR_VERSION$ARCH_SUFFIX"
+    docker run -d --rm --name "mysql-server-$MAJOR_VERSION" mysql/mysql-server:"$MAJOR_VERSION$ARCH_SUFFIX"
+    export DOCKER_HOST=unix:///tmp/podman.sock
+
+    podman system service --time=0 ${DOCKER_HOST} & DOCKER_SOCK_PID="$!"
     inspec exec --no-color "$MAJOR_VERSION/inspec/control.rb" --controls container
     inspec exec --no-color "$MAJOR_VERSION/inspec/control.rb" -t "docker://mysql-server-$MAJOR_VERSION" --controls packages
-    docker stop "mysql-server-$MAJOR_VERSION"
-    docker rm "mysql-server-$MAJOR_VERSION"
+    docker stop -i "mysql-server-$MAJOR_VERSION"
+    docker rm -i -f "mysql-server-$MAJOR_VERSION"
+    kill -TERM ${DOCKER_SOCK_PID}
+    rm -f /tmp/podman.sock
 done
