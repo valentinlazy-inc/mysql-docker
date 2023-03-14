@@ -24,13 +24,13 @@ ARCH=amd64; [ -n "$1" ] && ARCH=$1
 
 for MAJOR_VERSION in "${!MYSQL_ROUTER_VERSIONS[@]}"
 do
-    docker run -d --rm -e MYSQL_HOST=x -e MYSQL_PORT=9 -e MYSQL_USER=x -e MYSQL_PASSWORD=x -e MYSQL_INNODB_CLUSTER_MEMBERS=1 --name "mysql-router-$MAJOR_VERSION" mysql/mysql-router:$MAJOR_VERSION-$ARCH sleep 5000
+    podman run -d --rm -e MYSQL_HOST=x -e MYSQL_PORT=9 -e MYSQL_USER=x -e MYSQL_PASSWORD=x -e MYSQL_INNODB_CLUSTER_MEMBERS=1 --name "mysql-router-$MAJOR_VERSION" mysql/mysql-router:$MAJOR_VERSION-$ARCH sleep 5000
     export DOCKER_HOST=unix:///tmp/podman.sock
     podman system service --time=0 ${DOCKER_HOST} & DOCKER_SOCK_PID="$!"
     inspec exec $MAJOR_VERSION/inspec/control.rb --controls container
     inspec exec $MAJOR_VERSION/inspec/control.rb -t "docker://mysql-router-$MAJOR_VERSION" --controls packages
-    docker stop -i "mysql-router-$MAJOR_VERSION"
-    docker rm -i -f "mysql-router-$MAJOR_VERSION"
+    podman stop -i "mysql-router-$MAJOR_VERSION"
+    podman rm -i -f "mysql-router-$MAJOR_VERSION"
     kill -TERM ${DOCKER_SOCK_PID}
     rm -f /tmp/podman.sock
 done

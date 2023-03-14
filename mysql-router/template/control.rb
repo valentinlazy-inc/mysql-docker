@@ -2,7 +2,7 @@ control 'container' do
   impact 0.5
   describe podman.containers do
     its('status') { should cmp /Up/ }
-    its('commands') { should cmp /run.sh/ }
+    its('commands') { should cmp /mysqlrouter/ }
     its('images') { should cmp /mysql-router:%%MAJOR_VERSION%%/ }
     its('names') { should include "mysql-router-%%MAJOR_VERSION%%" }
   end
