@@ -9,13 +9,15 @@ MYSQL_CLIENT_PACKAGE=mysql-community-client-${MYSQL_SERVER_VERSIONS[${MAJOR_VERS
 MYSQL_ROUTER_PACKAGE=mysql-router-community-${MYSQL_ROUTER_VERSIONS[${MAJOR_VERSION}]}; [ -n "$4" ] && MYSQL_ROUTER_PACKAGE=$4
 MYSQL_CLIENT_PACKAGE_TEST=mysql-community-client; [ -n "$5" ] && MYSQL_CLIENT_PACKAGE_TEST=$5
 MYSQL_ROUTER_PACKAGE_TEST=mysql-router-community; [ -n "$6" ] && MYSQL_ROUTER_PACKAGE_TEST=$6
+REPO_NAME_SERVER=mysql80-community; [ -n "$7" ] && REPO_NAME_SERVER=$7
+REPO_NAME_TOOLS=mysql-tools-community; [ -n "$8" ] && REPO_NAME_TOOLS=$8
 for MAJOR_VERSION in "${!MYSQL_ROUTER_VERSIONS[@]}"; do
     sed 's#%%MYSQL_CLIENT_PACKAGE%%#'"${MYSQL_CLIENT_PACKAGE}"'#g' template/Dockerfile > tmpFile
     sed -i 's#%%MYSQL_ROUTER_PACKAGE%%#'"${MYSQL_ROUTER_PACKAGE}"'#g' tmpFile
     sed -i 's#%%CONFIG_PACKAGE_NAME%%#'"${CONFIG_PACKAGE_NAME}"'#g' tmpFile
     sed -i 's#%%REPO%%#'"${REPO}"'#g' tmpFile
-    REPO_VERSION=${MAJOR_VERSION//\./}
-    sed -i 's#%%REPO_VERSION%%#'"${REPO_VERSION}"'#g' tmpFile
+    sed -i 's#%%REPO_NAME_SERVER%%#'"${REPO_NAME_SERVER}"'#g' tmpFile
+    sed -i 's#%%REPO_NAME_TOOLS%%#'"${REPO_NAME_TOOLS}"'#g' tmpFile
     mv tmpFile $MAJOR_VERSION/Dockerfile
 
     # update test template
