@@ -9,12 +9,12 @@ control 'container' do
 end
 control 'packages' do
   impact 0.5
-  describe package('%%MYSQL_CLIENT_PACKAGE_NAME%%') do
+  describe package('%%MYSQL_CLIENT_PACKAGE_TEST%%') do
     it { should be_installed }
-    its ('version') { should match '%%MYSQL_CLIENT_VERSION%%.*' }
+    its ('version') { should match '%%MYSQL_CLIENT_PACKAGE_VERSION%%.*' }
   end
-  describe package('%%MYSQL_ROUTER_PACKAGE_NAME%%') do
+  describe package('%%MYSQL_ROUTER_PACKAGE_TEST%%') do
     it { should be_installed }
-    its ('version') { should match '%%MYSQL_ROUTER_VERSION%%.*' }
+    its ('version') { should match '%%MYSQL_ROUTER_PACKAGE_VERSION%%.*' }
   end
 end
