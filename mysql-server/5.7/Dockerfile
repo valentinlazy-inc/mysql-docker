@@ -22,8 +22,8 @@ RUN rpm -U https://repo.mysql.com/mysql-community-minimal-release-el7.rpm \
   && rpm -U https://repo.mysql.com/mysql80-community-release-el7.rpm
 
 # Install server and shell 8.0
-RUN yum install -y $MYSQL_SHELL_PACKAGE \
-  && yum install -y $MYSQL_SERVER_PACKAGE --enablerepo=mysql57-community-minimal\
+RUN yum install -y $MYSQL_SHELL_PACKAGE --enablerepo=mysql-tools-community \
+  && yum install -y $MYSQL_SERVER_PACKAGE --enablerepo=mysql80-community-minimal \
   && yum clean all \
   && mkdir /docker-entrypoint-initdb.d
 
