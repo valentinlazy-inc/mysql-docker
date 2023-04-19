@@ -29,9 +29,10 @@ REPO=mysql/mysql-router; [ -n "$1" ] && REPO=$1
 for MAJOR_VERSION in ${MULTIARCH_VERSIONS}; do
   MANIFEST_VERSIONS=$(./tag.sh "" "$MAJOR_VERSION")
   for MANIFEST_VERSION in $MANIFEST_VERSIONS; do
+    docker pull "$REPO:$MANIFEST_VERSION-arm64" "$REPO:$MANIFEST_VERSION-amd64"
     docker manifest create "$REPO:$MANIFEST_VERSION" "$REPO:$MANIFEST_VERSION-arm64" "$REPO:$MANIFEST_VERSION-amd64"
-    docker manifest annotate "$REPO:$MANIFEST_VERSION" "$REPO:$MANIFEST_VERSION-arm64" --os linux --arch arm64
-    docker manifest annotate "$REPO:$MANIFEST_VERSION" "$REPO:$MANIFEST_VERSION-amd64" --os linux --arch amd64
-    docker manifest push "$REPO:$MANIFEST_VERSION"
+    docker manifest add "$REPO:$MANIFEST_VERSION" "$REPO:$MANIFEST_VERSION-arm64" --os linux --arch arm64
+    docker manifest add "$REPO:$MANIFEST_VERSION" "$REPO:$MANIFEST_VERSION-amd64" --os linux --arch amd64
+    docker manifest push "$REPO:$MANIFEST_VERSION" "docker://$REPO:$MANIFEST_VERSION"
   done
 done
