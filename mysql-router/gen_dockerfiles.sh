@@ -5,13 +5,13 @@ source ./VERSION
 
 REPO=https://repo.mysql.com; [ -n "$1" ] && REPO=$1
 CONFIG_PACKAGE_NAME=mysql80-community-release-el8.rpm; [ -n "$2" ] && CONFIG_PACKAGE_NAME=$2
-MYSQL_CLIENT_PACKAGE=mysql-community-client-${MYSQL_SERVER_VERSIONS[${MAJOR_VERSION}]}; [ -n "$3" ] && MYSQL_CLIENT_PACKAGE=$3
-MYSQL_ROUTER_PACKAGE=mysql-router-community-${MYSQL_ROUTER_VERSIONS[${MAJOR_VERSION}]}; [ -n "$4" ] && MYSQL_ROUTER_PACKAGE=$4
 MYSQL_CLIENT_PACKAGE_TEST=mysql-community-client; [ -n "$5" ] && MYSQL_CLIENT_PACKAGE_TEST=$5
 MYSQL_ROUTER_PACKAGE_TEST=mysql-router-community; [ -n "$6" ] && MYSQL_ROUTER_PACKAGE_TEST=$6
 REPO_NAME_SERVER=mysql80-community; [ -n "$7" ] && REPO_NAME_SERVER=$7
 REPO_NAME_TOOLS=mysql-tools-community; [ -n "$8" ] && REPO_NAME_TOOLS=$8
 for MAJOR_VERSION in "${!MYSQL_ROUTER_VERSIONS[@]}"; do
+    MYSQL_CLIENT_PACKAGE=mysql-community-client-${MYSQL_SERVER_VERSIONS[${MAJOR_VERSION}]}; [ -n "$3" ] && MYSQL_CLIENT_PACKAGE=$3
+    MYSQL_ROUTER_PACKAGE=mysql-router-community-${MYSQL_ROUTER_VERSIONS[${MAJOR_VERSION}]}; [ -n "$4" ] && MYSQL_ROUTER_PACKAGE=$4
     sed 's#%%MYSQL_CLIENT_PACKAGE%%#'"${MYSQL_CLIENT_PACKAGE}"'#g' template/Dockerfile > tmpFile
     sed -i 's#%%MYSQL_ROUTER_PACKAGE%%#'"${MYSQL_ROUTER_PACKAGE}"'#g' tmpFile
     sed -i 's#%%CONFIG_PACKAGE_NAME%%#'"${CONFIG_PACKAGE_NAME}"'#g' tmpFile
